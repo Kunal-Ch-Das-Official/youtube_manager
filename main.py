@@ -1,51 +1,82 @@
+import time
 import curses
-from handler.add_new_video import add_new_video
-from handler.delete_video import delete_video
-from handler.list_all_videos import list_all_videos
-from handler.update_video import update_video
-from helpers.load_data import load_data
-from helpers.data_selector import data_selector
+from models.videos_model import VideoModel
+from controllers.fetch_data_ctrl import fetch_data_ctrl
+from controllers.add_new_data_ctrl import add_new_data_ctrl
+from controllers.update_one_ctrl import update_one_ctrl
+from controllers.delete_one_ctrl import delete_one_ctrl
+
+from helpers.choice_selector import choice_selector
+from helpers.video_selector import video_selector
 
 
 def main():
-    videos = load_data()
+
+    VideoModel.create_table()
+
+    choices = [
+        "1. See all data",
+        "2. Add a new data",
+        "3. Update existing data",
+        "4. Delete a data",
+        "5. Exit program",
+    ]
+
     while True:
-        print("\n Youtube Manager. | choose an option! ")
-        print("Press (1) to list all youtube videos.")
-        print("Press (2) for adding a new youtube video.")
-        print("Press (3) to update a youtube video details.")
-        print("Press (4) to delete a youtube video.")
-        print("Press (5) for exist the app.")
-        users_choice = int(input("Enter a value and press enter to continue...\n"))
+        user_choice = curses.wrapper(choice_selector, choices)
 
-        match users_choice:
-            case 1:
-                list_all_videos(videos)
-                break
-            case 2:
-                add_new_video(videos)
-                break
-            case 3:
-                selected_video = curses.wrapper(
-                    data_selector, videos, operation="Update"
-                )
-                if selected_video:
-                    update_video(selected_video, videos)
-                break
-            case 4:
-                selected_video = curses.wrapper(
-                    data_selector, videos, operation="Delete"
-                )
-                delete_video(selected_video, videos)
-                break
-            case 5:
-                print("Thanks for visiting...")
-                break
-            case _:
-                print("Invalid choice. Please enter a valid number")
+        # todo: 1. Fetch all data from database .............
+        if user_choice.startswith("1"):
+
+            def fallback():
+                print("Getting all data...\n")
+                time.sleep(0.2)
+                print("-" * 120)
+
+            fallback()
+
+            videos = fetch_data_ctrl()
+            if len(videos) == 0:
+                print("Please add a video first. No record found..")
+                print("-" * 120)
+            else:
+                for video in videos:
+                    print(video)
+                    print("-" * 120)
+                    print("\nSuccessful!")
+
+        # * 2. Add new data to database..........
+        elif user_choice.startswith("2"):
+            video_title = input("Enter video title: \n")
+            video_duration = input("Enter video duration: \n")
+
+            if video_title == "" and video_duration == "":
+                print("Please input value.")
+            else:
+                add_new_data_ctrl(video_title, video_duration)
+
+        # ? 3. Update existing data from database ..........
+        elif user_choice.startswith("3"):
+            print("Updating data...")
+            videos = fetch_data_ctrl()
+            select_video = curses.wrapper(video_selector, videos, operation="Update")
+            update_one_ctrl(selected_video=select_video)
+
+        #! 4. Delete data from database ..........
+        elif user_choice.startswith("4"):
+            print("Deleting data...")
+            videos = fetch_data_ctrl()
+            select_video = curses.wrapper(video_selector, videos, operation="Delete")
+            result = delete_one_ctrl(selected_video=select_video)
+            print(result)
+
+        #! 5. Exit the program..........
+        elif user_choice.startswith("5"):
+            print("Goodbye!")
+            break
+
+        input("\nPress Enter to continue...")
 
 
-# Function Calling 
 if __name__ == "__main__":
     main()
-
